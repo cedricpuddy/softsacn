@@ -1,0 +1,51 @@
+# Demo configuration file.
+# - We check ./env/softsacn.yaml before ./softsacn.yaml
+general:
+    cfg_version: 1      # not currently checked
+
+universes:
+    1:                  # universe number
+        disable: 0      # set to 1 to disable this universe
+        ip: "10.0.0.10" # IPv4 IP, multicast not currently enabled
+        channels: 150   # 150 channels = 50 rgb lamp assemblies
+        hostname: "D100-tree1"      # a note field currently
+        desc: "Tree controller #1"  # a more friendly desc note field
+        type: "rgb"                 # default channel map is RGB
+    5:
+        disable: 0
+        ip: "10.0.0.11"
+        channels: 150
+        hostname: "D101-tree2"
+        desc: "Tree controller #2"
+        type: "rgb"
+
+# I think of two major likely ways we would want to refer to palette colours:
+# 1) by "Position", where we are cycling through the available colours in a specific
+#    sequence (eg: 1,2,2,3,3,2,2,1 and repeat to make a double lamp bounce pattern)
+# 2) by "colour", but for building patterns, this is probably less common
+# 3) since this is a library, we can embed inputs/variables/ranges for function calls!
+#    perhaps like this: "christmas_a2022 = 
+#     {"name":"red","rgb":"128,128,128","functionname":{"param1":"val1","param2":"val2"}}
+#    then in an effect function, we can say "if cfg['palettes']['christmas_a2022']['funcname']:" 
+palettes:
+    c2022_antique_rgw:    # give the palette a formal name
+        - name: "red"     # nest in key/value pairs; "name" and "rgb" currently defined
+          rgb: "9e,10,07"
+        - name: "green"
+          rgb: "27,45,30"
+        - name: "white"
+          rgb: "db,aa,46"
+    primary_colours:
+        - name: "red"
+          rgb: "255,0,0"
+        - name: "green"
+          rgb: "0,255,0"
+        - name: "blue"
+          rgb: "0,0,255"
+    c2022_antique_rgb:
+        - name: "brown4"
+          rgb: "9e,10,07"
+        - name: "brown5"
+          rgb: "21,6a,11"
+        - name: "brown6"
+          rgb: "d9,99,1a"
