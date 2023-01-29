@@ -1,2 +1,18 @@
 # softsacn
 Control your E1.31 (ArtNET/DMX/ESPixelstick/etc) lights from Python; write your own algorithms for cool light patterns.  This is a rendering library to drive the python SaCN E1.31/ArtNET/DMX low level library.
+
+This started as a simple script to efficiently drive static patterns and simple effects to arrays of permanently installed lights from a python script, but the potential is exciting; specifically, ideas for development include:
+
+0) Simple and Lightweight Programatic Driving of Lights -- no static pre-compiled "show files" that need to be compiled and loaded and played (like the typical "holiday light show" management programs); also no inherent "gaps" or "resets" as are typical when playing pre-compiled show files.
+
+1)  Opportunity to play with algorithms and event driven code that would drive visual responses; one could hook any data source, apply transformations, and render (one can easily imagine a music visualization, etc)
+
+2) Resource Conservative: E1.31 receivers typically latch state, so high frequency bit bashing should not be required; as the lights climbs into the thousands, quality of networking (cheap wifi ESP8266 controllers are very common!) can become an issue.  The idea here is to build the code to be event/interupt driven, such that it only sends updates to specific universes as their data changes, and running effects can be run at the actual frequency at which data changes.
+
+3) Rendering Pipeline: Having a render pipeline concept means having the ability to apply events and adjustments at different stages of determining the updated state of the lights.  For example: Gamma, Dimming, and Colour Channel bias adjustments would make it easier to integrate/match lights from different manufacturers that may have differnt colour rendering, or perceiving lights differently because they are on different angles to the observer (for example, the same lights and same pattern at eye level and at a 2nd story height can look entirely different), or you could have a twinkle effect that applies across multiple controllers with entirely different patterns set, etc.
+
+4) Colour Palettes - the data model aims to make it possible to have libraries of colours and effect configurations bundled together, so you can program in terms of colours, position numbers, have effects enabled/stacked in specific orders (eg: a marque chase effect could be defined and canned).
+
+5) Automation/API: having this be something that can be used as an API, triggered via things like MQTT, integrated into platforms like Home Assistant (and no reason you couldn't keep a lot of your configuration in HA, such as universe definitions, and palettes; likewise get regular status feedback in return) - it would enable have DIY lighting setups for interior/exterior lighting that are /precisely/ the way you want them, but as easy to control and monitor as an ESPHome Sonoff switch.
+
+6) Output Visualizer: Admittedly brief research has not turned up a simple E1.31 target that would show a visualization of what E1.31 traffic was being received on which universes.  SaCN has the ability to receive/decode E1.31, so creating a simple visualization tool that would facilitate hardware-free testing is an idea of interest.  The idea is that one could:  (a) run the output straight to hardware, no diagnostics, (b) have a split, where a copy goes to the diagnostic target and real lights, or (c) diagnostic only.  This would also be useful for test infrastructure, to allow programatic validation of output during development.
