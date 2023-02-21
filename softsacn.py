@@ -15,15 +15,6 @@ except ImportError:
 
 config_file = "env/softsacn.yaml"
 
-'''' Ideas
-1) sacn has a receive ability - make a diagnostic target that, when enabled, overrides IPs
-   for all or some universes, and instead sends it to the diagnostic target.  It would
-   be a text window field of coloured blocks, corresponding to received data, with universes
-   labelled.
-2) 
-'''
-
-
 ''' Functions
 - prnstat():       gives a more readable version of the datarr "framebuffer" for low level debugging
 - senduniverse():  sends the values for a given universe in datarr to the outside world
@@ -39,64 +30,24 @@ def prnstat(prnname, prnarr, k, l):
     print(k, end=l)
 
 
-def senduniverse(su_universe, su_offset, su_channels, su_data):
-    # su_universe - universe we are being asked to send
-    # su_offset -
-    #data - framebuffer
-    # this function assumes we are supposed to send all channels for specified universe
-    senduniversearr = arr.array('i', [])
-    for i in range(su_offset, su_offset + su_channels):
-        senduniversearr.append(su_data[i])
-        sender[su_universe].dmx_data = senduniversearr
-    #print("senduniverse = ", end=" ")
-    #print(universe,end=" ")
-    #prnstat("data: ", data, 0, "")
-    #prnstat("senduniversearr: ", senduniversearr, 0, "")
-
-    # This is what the SaCN library requires - a list of decimal values in channel
+def senduniverse(su_universe):
+    # The SaCN library requires a list of decimal values in channel
     # order to send to a specific [universe].  The next line is a quick PoC.
     # sender[33].dmx_data = (255,92,92, 255,92,92, 128,255,128, 128,255,128, 255,92,92, 128,255,128, 255,92,92, 255,128,128)  # 0-255 for each channel, starting from zero
 
-    # By default, the SaCN library will resend its dmx_data once per second.
-    # You can forcably update a universe at any time by calling sender[universe].
+    # This function uses the universe offset vaule to slice the required
+    # channels out of the dataarr.  This function is for readability, not
+    # because it encapsulates any complex functionality.
 
+    # We just use the structure directly; we could easily add an argument
+    # and pass in a copy, if required at some point.
 
-def inituniverses(uid):
-    # uid - universe_initialization_dictionary
-    offset = 0
-    for un in list(uid):
-        # un - current universe#; note - using a dictionary guarantees no duplicate keys
-        # we need to iterate on a list(copy of dict), becuase we will remove any disabled
-        #    universes during our iteration over the dict.
-        if not(uid[un].get('disable')):  # universes enabled by default
-
-            #initialize <argument> universe
-            sender.activate_output(un)
-            # note - multicast disables unicast; intentionally hardcoded to false for now
-            sender[un].multicast = False
-            # unicast target ip for <arg> universe
-            sender[un].destination = uid[un]['ip']
-            # create an index marking the start of this universe's channels in datarr
-            uid[un]['offset'] = offset
-            print("Done init of universe: " + str(un) +
-                  " channel offset: " + str(offset), end=" ")
-            # set "offset" to mark the end of this string, for use on the next string
-            # note: arrays number from 0; thus the simple channel number yields the
-            #       correct offset for the start of the next universe.
-            offset = offset + uid[un]['channels']
-            print("ip: " + uid[un]['ip'] + " next offset: " + str(offset))
-        else:
-            # best not to leave a disabled universe in the live list of universes!
-            del(uid[un])
-    # we return our dictionary, since we have modified it with offsets
-    # "offset" just so happens to contain the total number of channels + 1.  We leave it like this
-    # because range operators (eg: "for i in range(0,n)"") will stop at i=n-1
-    return(uid, offset)
-
+    i_offset = universes[i_unv]['offset']
+    sender[i_unv].dmx_data = datarr[i_offset:i_offset +
+                                    universes[i_unv]['channels']]
 
 # load config file
 # returns a dictionary of universes, or None if error
-
 
 def load_config(config_file):
     try:
@@ -135,6 +86,35 @@ def init_universes(cfg):
             del(cfg['universes'][un])
     return(cfg['universes'], offset)
 
+def marquie(universe,seqs,cfg):
+    # universe # to render
+    # seqs - name of the sequence to be used
+    # cfg copy of the cfg array
+    print ("Marquie running - universe: " + str(universe) + " seqs: " + seqs)
+
+'''
+seqs:
+    sequence: "main"
+        universes: "33"
+        palette: "w2023_mardiegras"
+        effect: "marquie"
+            - nodes: "gold,purple,purple,gold,green,green"
+cfg['effectfunctions']=('marquie')
+'''
+def init_seqs(cfg):
+    for seqs in cfg['seqs']:
+        if not(cfg['seqs'][seqs].get('disable')):  # seqs enabled by default
+            if not(cfg['seqs'][seqs].get('universes')): #if no universes are stipulated, apply to *all* universes
+                is_universes=cfg['universes']
+            else:
+                is_universes=cfg['seqs'][seqs]['universes']
+            # if not(cfg['effectfunctions']) -- will filter effect functions later
+            for i in is_universes:
+                marquie(i,seqs,cfg)
+        else:
+            # best not to leave a disabled universe in the live list of universes!
+            del(cfg['seqs'][seqs])        
+
 
 # color_lookup[] - array of colors for each LED
 color_lookup = {}
@@ -143,7 +123,6 @@ color_lookup = {}
 #   numberOfLeds - number of LEDs in the array
 #   color_range - tuple of min/max values for each color (default: 240-255)
 # returns color_lookup[]
-
 
 def fill_color_lookup(numberOfLeds, color_range=(240, 255)):
     color_lookup.clear()
@@ -154,13 +133,8 @@ def fill_color_lookup(numberOfLeds, color_range=(240, 255)):
         print("color_lookup[" + str(i) + "] = " + str(color_lookup[i]))
     return color_lookup
 
-
 '''
 Data Structures
-- pallets[]
--- pallets[0] Stephs 2022-12-24 antique look
--- pallets[1] Maximum R-G-B Pattern for bold testing
--- pallets[2] Cedric dining room chandelier antique look 2022-12-24
 
 - universes{} is a list of "universes", each of which addresses up to 510
   "channels" (thus 170 RGB lights), by IP address.  The universe number needs
@@ -200,8 +174,7 @@ Data Structures
              colours to end the flash.
 '''
 
-# Colour Pallettes
-# defined in cfg['palettes'] - see configuration file
+# Colour Pallettes -- defined in cfg['palettes'] - see configuration file
 
 # create our blank framebuffers
 datarr = arr.array('i', [])
@@ -225,7 +198,6 @@ sender.start()
 print ("softsacn: Sender thread started")
 
 # send our univ. list, get it back with offsets & total number of channels
-#universes, total_channels = inituniverses(universes)
 universes, total_channels = init_universes(cfg)
 
 # this is a static asumption of rbg lamps; safe for now.
@@ -237,21 +209,36 @@ else:
     print("Total Channels: "+str(total_channels) +
           " Total lamps: "+str(total_lamps))
 
+
+i=0
+#print(cfg)
+while i < total_lamps+2:
+    for j in cfg['seqs']['main']['nodes']:
+        cur_palette=cfg['seqs']['main']['palette']
+        #print ("j= "+str(j)+ "cur_palette= "+cur_palette)
+        #print (cfg['palettes'][cur_palette][int(j)])
+        color = (cfg['palettes'][cur_palette][int(j)]['rgb'])
+        (r, g, b) = color.split(',')
+        datarr.append(int(r))
+        datarr.append(int(g))
+        datarr.append(int(b))
+
+        # print("lamp= " + str(i) + " palette_col= " + str(j) + " color= " + color, end=" " )
+    i = i+1
+
+
+'''
 for i in range(0, total_lamps):
     # Fill in random colours from colour pallette <n>:
     # this is by LAMP, since each colour selected will fill the next 3 channels
     # pick a colour (one of 3)
 
-    # this would pick from a palette
-    for j in range(0, 3):
+    for j in cfg['seqs']['main']['nodes']:
+        color = (cfg['palettes']['w2023_mardiegras'][j]['rgb'])
+
         # whoops - need to settle on a base for colour numbers, eg: is hex c2022_antique_rgw
-        color = cfg['palettes']['primary_colours'][j]['rgb']
-        print("i = ", end=" ")
-        print(i, end=" ")
-        print("j = ", end=" ")
-        print(j, end=" ")
-        print("  color =", end=" ")
-        print(color)
+        color = cfg['palettes']['w2023_mardiegras'][j]['rgb']
+        print("i= " + str(i) + " j= " + str(j) + " color= " + color )
         (r, g, b) = color.split(',')
         datarr.append(int(r))
         datarr.append(int(g))
@@ -268,6 +255,7 @@ for i in range(0, total_lamps):
             datarr.append(random.randint(blue//3, blue))
         if (i_rgb == 2):
             datarr.append(blue)
+    '''        
 print("init data filled")
 prnstat("datarr: ", datarr, 0, "")
 print("")
@@ -294,6 +282,7 @@ count = 0
 # method
 # change to "while True" to enable.
 
+'''
 fill_color_lookup(total_lamps, (240, 255))
 while True:
     # note, this code is functionally broken, middle of being reworked
@@ -320,8 +309,9 @@ while True:
         datarr[k+i] = holdrr.pop(0)
     holdrr = arr.array('i', [])
     count += 1
+'''
 
-# time.sleep(10)  # send the data for 10 seconds
+
 
 # I do not wish to call sender.stop, as it appears to send "blackout", and I
 # prefer that the state of the lights latches.

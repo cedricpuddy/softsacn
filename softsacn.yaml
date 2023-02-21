@@ -49,3 +49,20 @@ palettes:
           rgb: "21,6a,11"
         - name: "brown6"
           rgb: "d9,99,1a"
+    w2023_mardiegras:
+        0:
+          name: "purple"
+          rgb: "64,00,64"
+        1:
+          name: "green"
+          rgb: "00,64,00"
+        2:
+          name: "gold"
+          rgb: "145,98,00"
+
+seqs:
+    main:
+        universes: "33"
+        palette: "w2023_mardiegras"
+        effect: "marquie"
+        nodes: "200211"
